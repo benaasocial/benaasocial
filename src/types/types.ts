@@ -80,13 +80,18 @@ export type Targets = { facebook: boolean; instagram: boolean; tiktok: boolean }
 export type ImagesMedia = { kind: "images"; images: UploadedImage[] };
 export type VideoMedia = { kind: "video"; video: UploadedVideo };
 
-export type TikTokPrivacy = "PUBLIC_TO_EVERYONE" | "MUTUAL_FOLLOW_FRIENDS" | "SELF_ONLY";
+
+export type TikTokPrivacy =
+  | "PUBLIC_TO_EVERYONE"
+  | "MUTUAL_FOLLOW_FRIENDS"
+  | "SELF_ONLY";
+
 
 export type TikTokSettings = {
-  privacy_level: TikTokPrivacy;
-  disable_comment: boolean;
-  disable_duet: boolean;
-  disable_stitch: boolean;
+  privacyStatus: TikTokPrivacy;
+  allowComments: boolean;
+  allowDuet: boolean;
+  allowStitch: boolean;
 };
 
 export type YoutubePrivacyStatus = "private" | "public" | "unlisted";
