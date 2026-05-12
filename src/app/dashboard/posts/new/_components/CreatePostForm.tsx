@@ -8,6 +8,7 @@ import { PenSquare } from "lucide-react";
 import { uploadManyImages, uploadVideo } from "@/lib/cloudinary";
 import useCreatePost from "@/hooks/useCreatePost";
 import { ConnectionStatus, CreatePostPayload } from "@/types/types";
+import PostTikTokSettingsSection from "./PostTikTokSettingsSection";
 import {
   CreatePostFormSchema,
   CreatePostFormValues,
@@ -56,6 +57,12 @@ export default function CreatePostForm() {
         instagram: false,
         tiktok: false,
         youtube: false,
+      },
+      tiktokSettings: {
+        privacyStatus: "",
+        allowComments: false,
+        allowDuet: false,
+        allowStitch: false,
       },
       media: {
         kind: "images",
@@ -150,6 +157,7 @@ export default function CreatePostForm() {
         hashtags: values.hashtags,
         targets: values.targets,
         media: { kind: "video", video: uploaded },
+        tiktokSettings: values.targets.tiktok ? values.tiktokSettings : undefined,
       };
 
       mutate.mutate({ data: payload });
@@ -160,7 +168,7 @@ export default function CreatePostForm() {
           ? error.message
           : "Something went wrong";
 
-  
+
       if (toastId) toastFlow.dismiss(toastId);
 
       toastFlow.error(message);
@@ -184,6 +192,7 @@ export default function CreatePostForm() {
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
         <PostContentSection form={form} />
         <PostMediaSection form={form} />
+        <PostTikTokSettingsSection form={form} />
         <PostTargetsSection
           form={form}
           conn={conn}

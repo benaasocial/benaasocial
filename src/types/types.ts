@@ -111,6 +111,12 @@ export type CreatePostPayload =
     hashtags: string[];
     targets: Targets;
     media: VideoMedia;
+    tiktokSettings?: {
+      privacyStatus: "PUBLIC_TO_EVERYONE" | "MUTUAL_FOLLOW_FRIENDS" | "SELF_ONLY" | "";
+      allowComments: boolean;
+      allowDuet: boolean;
+      allowStitch: boolean;
+    };
   };
 
 

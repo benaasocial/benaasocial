@@ -109,35 +109,12 @@ const normalizeTag = (s: string) => {
 
 export const CreatePostFormSchema = z
   .object({
-    /**
-     * Form action:
-     * - draft: save without publishing
-     * - publish: publish immediately
-     */
     action: z.enum(["draft", "publish"]),
 
-    /**
-     * Caption is mandatory and trimmed.
-     * If you want drafts without caption later, this can be relaxed.
-     */
     caption: z.string().trim().min(1, "Caption is required."),
 
-    /**
-     * Final hashtags list used by the form.
-     * Each tag is trimmed and must not be empty.
-     */
     hashtags: z.array(z.string().trim().min(1, "Hashtag cannot be empty")),
 
-    /**
-     * Draft input field for hashtag typing (before adding to `hashtags` array).
-     * - transform: normalize by trimming and removing leading "#"
-     * - refine: allow empty string OR valid hashtag characters
-     *
-     * Regex explanation:
-     * - \p{L} letters in any language
-     * - \p{N} numbers in any language
-     * - "_" underscore
-     */
     hashtagDraft: z
       .string()
       .transform(normalizeTag)
@@ -145,9 +122,6 @@ export const CreatePostFormSchema = z
         message: "Hashtag can only contain letters, numbers, or underscores.",
       }),
 
-    /**
-     * Publishing targets (social platforms).
-     */
     targets: z.object({
       facebook: z.boolean(),
       instagram: z.boolean(),
@@ -156,25 +130,28 @@ export const CreatePostFormSchema = z
     }),
 
     /**
-     * Media input: either images or video.
+     * TikTok Direct Post settings.
+     * Required only when publishing to TikTok.
      */
+    tiktokSettings: z.object({
+      privacyStatus: z
+        .enum(["PUBLIC_TO_EVERYONE", "MUTUAL_FOLLOW_FRIENDS", "SELF_ONLY"])
+        .or(z.literal("")),
+
+      allowComments: z.boolean(),
+      allowDuet: z.boolean(),
+      allowStitch: z.boolean(),
+    }),
+
     media: MediaInputSchema,
   })
   .superRefine((val, ctx) => {
-    /**
-     * Cross-field validations live here because they depend on multiple fields.
-     */
-
     const hasTarget =
       val.targets.facebook ||
       val.targets.instagram ||
       val.targets.tiktok ||
       val.targets.youtube;
 
-    /**
-     * Only require at least one platform when the user is publishing.
-     * Drafts can be saved without selecting any platform.
-     */
     if (val.action === "publish" && !hasTarget) {
       ctx.addIssue({
         code: "custom",
@@ -183,9 +160,6 @@ export const CreatePostFormSchema = z
       });
     }
 
-    /**
-     * Defensive check: images mode should always have at least 1 file.
-     */
     if (val.media.kind === "images" && val.media.images.length === 0) {
       ctx.addIssue({
         code: "custom",
@@ -194,10 +168,6 @@ export const CreatePostFormSchema = z
       });
     }
 
-    /**
-     * TikTok requires video content.
-     * If user selects TikTok but provides images, block submission.
-     */
     if (val.media.kind === "images" && val.targets.tiktok) {
       ctx.addIssue({
         code: "custom",
@@ -206,10 +176,6 @@ export const CreatePostFormSchema = z
       });
     }
 
-    /**
-     * YouTube requires video content.
-     * If user selects YouTube but provides images, block submission.
-     */
     if (val.media.kind === "images" && val.targets.youtube) {
       ctx.addIssue({
         code: "custom",
@@ -218,15 +184,26 @@ export const CreatePostFormSchema = z
       });
     }
 
-    /**
-     * If media is video, ensure a video file was actually selected.
-     * (We allowed null/optional earlier to accommodate UI state.)
-     */
     if (val.media.kind === "video" && !val.media.video) {
       ctx.addIssue({
         code: "custom",
         path: ["media", "video"],
         message: "Please select a video",
+      });
+    }
+
+    /**
+     * TikTok requires manual privacy selection before publishing.
+     */
+    if (
+      val.action === "publish" &&
+      val.targets.tiktok &&
+      !val.tiktokSettings.privacyStatus
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["tiktok", "privacyStatus"],
+        message: "Please select TikTok privacy status.",
       });
     }
   });

@@ -169,7 +169,7 @@ export default function PostTargetsSection({
                 hint={
                   tiktokDisabled
                     ? "TikTok requires video media."
-                    : "Publish your video to TikTok. Privacy is set to Public automatically."
+                    : "Publish your video to TikTok."
                 }
                 icon={<FaTiktok className="h-5 w-5 text-black" />}
                 onChange={(value) => field.onChange(value)}
@@ -191,7 +191,7 @@ export default function PostTargetsSection({
                 hint={
                   youtubeDisabled
                     ? "YouTube requires video media."
-                    : "Publish your video to YouTube. Privacy is set to Public automatically."
+                    : "Publish your video to YouTube."
                 }
                 icon={<FaYoutube className="h-5 w-5 text-[#FF0000]" />}
                 onChange={(value) => field.onChange(value)}

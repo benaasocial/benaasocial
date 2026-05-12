@@ -78,6 +78,7 @@ class HttpServices {
    * POST /endpoint
    */
   async post<T>(data: unknown) {
+    console.log(data);
     const res = await apiCall.post<ApiOk<T>>(`/${this.endpoint}`, data);
     return res.data;
   }
