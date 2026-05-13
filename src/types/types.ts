@@ -372,3 +372,25 @@ export type PaginationProps = {
   totalPages: number;
   onPageChange: (page: number) => void;
 };
+
+
+
+
+export type TikTokCreatorInfo = {
+  creator_avatar_url: string;
+  creator_nickname: string;
+  creator_username: string;
+
+  duet_disabled: boolean;
+  stitch_disabled: boolean;
+  comment_disabled: boolean;
+
+  max_video_post_duration_sec: number;
+
+  privacy_level_options: (
+    | "PUBLIC_TO_EVERYONE"
+    | "FOLLOWER_OF_CREATOR"
+    | "MUTUAL_FOLLOW_FRIENDS"
+    | "SELF_ONLY"
+  )[];
+};

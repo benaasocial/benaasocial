@@ -1,4 +1,4 @@
-import { ApiOk } from "./../types/types";
+import { ApiOk, TikTokCreatorInfo } from "./../types/types";
 import apiCall from "./apiCall";
 
 
@@ -37,6 +37,19 @@ class HttpServices {
    */
   async getMe() {
     const res = await apiCall.get<ApiOk<{ user: User }>>(`/${this.endpoint}/me`);
+    return res.data;
+  }
+
+
+  /**
+   * Get TikTok creator info
+   * GET /tiktok/creator-info
+   */
+  async getAllTikTokInfo() {
+    const res = await apiCall.get<ApiOk<TikTokCreatorInfo>>(
+      `/posts/${this.endpoint}/creator-info`
+    );
+
     return res.data;
   }
 
