@@ -46,12 +46,12 @@ function Row({
     platform === "facebook"
       ? "Facebook"
       : platform === "instagram"
-        ? "Instagram"
-        : platform === "tiktok"
-          ? "TikTok"
-          : platform === "youtube"
-            ? "YouTube"
-            : "X";
+      ? "Instagram"
+      : platform === "tiktok"
+      ? "TikTok"
+      : platform === "youtube"
+      ? "YouTube"
+      : "X";
 
   const checkboxRef = React.useRef<HTMLButtonElement | null>(null);
 
@@ -99,11 +99,11 @@ function Row({
           <div className="min-w-0">
             <div className="truncate font-medium">{title}</div>
 
-            <div className="text-xs text-muted-foreground break-words">
+            <div className="break-words text-xs text-muted-foreground">
               {state.connected ? (
                 <>
                   Connected:{" "}
-                  <span className="font-medium text-foreground break-all">
+                  <span className="break-all font-medium text-foreground">
                     {state.accountName ?? ""}
                   </span>
                 </>
@@ -141,10 +141,26 @@ function Row({
 }
 
 /**
+ * Empty fallback state
+ */
+const EMPTY_STATE: PlatformState = {
+  connected: false,
+  active: false,
+  accountName: "",
+};
+
+/**
  * Connect platforms page
  */
-export default function ConnectPage({ state, platform }: { state?: string; platform?: string }) {
+export default function ConnectPage({
+  state,
+  platform,
+}: {
+  state?: string;
+  platform?: string;
+}) {
   const { data: status, isLoading } = useStatus();
+
   const setActive = useSetPlatformActive();
   const startMeta = useMetaStartUrl();
   const startTiktok = useTikTokStartUrl();
@@ -164,7 +180,6 @@ export default function ConnectPage({ state, platform }: { state?: string; platf
 
   const router = useRouter();
 
-
   /**
    * Load Meta pages after redirect
    */
@@ -183,15 +198,23 @@ export default function ConnectPage({ state, platform }: { state?: string; platf
   }, [platform, state]);
 
   /**
+   * Safe connections object
+   */
+  const connections = status?.connections ?? {
+    facebook: EMPTY_STATE,
+    instagram: EMPTY_STATE,
+    tiktok: EMPTY_STATE,
+    youtube: EMPTY_STATE,
+  };
+
+  /**
    * Handle connect / disconnect / activate toggle
    */
   const handleToggle = async (platform: Platform, next: boolean) => {
-    if (!status) return;
-
     setBusy(true);
 
     try {
-      const current = status.connections[platform];
+      const current = connections[platform];
 
       // enable / connect flow
       if (next) {
@@ -214,24 +237,31 @@ export default function ConnectPage({ state, platform }: { state?: string; platf
             return;
           }
 
-          if (platform === "x") {
-            const { url } = await startYouTube.mutateAsync();
-            window.location.href = url;
-            return;
-          }
-
           return;
         }
 
-        // already connected → just activate it
-        await setActive.mutateAsync({ platform, active: true });
+        // already connected → activate
+        await setActive.mutateAsync({
+          platform,
+          active: true,
+        });
+
+        toastFlow.success(`${platform} activated`);
+
         return;
       }
 
       // deactivate connected platform
       if (current.connected) {
-        await setActive.mutateAsync({ platform, active: false });
+        await setActive.mutateAsync({
+          platform,
+          active: false,
+        });
+
+        toastFlow.success(`${platform} deactivated`);
       }
+    } catch (err) {
+      toastFlow.error(getErrorMessage(err));
     } finally {
       setBusy(false);
     }
@@ -261,49 +291,55 @@ export default function ConnectPage({ state, platform }: { state?: string; platf
     run();
   }, [getYouTubeChannel, platform, router, state]);
 
-  // loading state
-  if (isLoading || !status) return <div className="p-6">Loading...</div>;
+  /**
+   * Loading state
+   */
+  if (isLoading) {
+    return <div className="p-6">Loading...</div>;
+  }
 
   return (
-    <div className="max-w-3xl mx-auto p-4 md:p-6 space-y-4">
+    <div className="mx-auto max-w-3xl space-y-4 p-4 md:p-6">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold">Connect Platforms</h1>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Choose platforms to connect</CardTitle>
+          <CardTitle className="text-base">
+            Choose platforms to connect
+          </CardTitle>
         </CardHeader>
 
         <CardContent className="space-y-3">
-          {/* Facebook row */}
+          {/* Facebook */}
           <Row
             platform="facebook"
-            state={status.connections.facebook}
+            state={connections.facebook}
             disabled={busy || setActive.isPending || startMeta.isPending}
             onToggle={(next) => handleToggle("facebook", next)}
           />
 
-          {/* Instagram row */}
+          {/* Instagram */}
           <Row
             platform="instagram"
-            state={status.connections.instagram}
+            state={connections.instagram}
             disabled={busy || setActive.isPending || startMeta.isPending}
             onToggle={(next) => handleToggle("instagram", next)}
           />
 
-          {/* TikTok row */}
+          {/* TikTok */}
           <Row
             platform="tiktok"
-            state={status.connections.tiktok}
+            state={connections.tiktok}
             disabled={busy || setActive.isPending || startMeta.isPending}
             onToggle={(next) => handleToggle("tiktok", next)}
           />
 
-          {/* YouTube row */}
+          {/* YouTube */}
           <Row
             platform="youtube"
-            state={status.connections.youtube}
+            state={connections.youtube}
             disabled={busy || setActive.isPending || startMeta.isPending}
             onToggle={(next) => handleToggle("youtube", next)}
           />
@@ -316,15 +352,18 @@ export default function ConnectPage({ state, platform }: { state?: string; platf
         onOpenChange={(v) => {
           setOpen(v);
 
-          // clear query params when dialog closes
-          if (!v) router.replace("/dashboard/connect");
+          if (!v) {
+            router.replace("/dashboard/connect");
+          }
         }}
       >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Select Facebook Page</DialogTitle>
+
             <DialogDescription>
-              Choose the page you want to connect. This will also detect Instagram business account if linked.
+              Choose the page you want to connect. This will also detect
+              Instagram business account if linked.
             </DialogDescription>
           </DialogHeader>
 
@@ -351,18 +390,20 @@ export default function ConnectPage({ state, platform }: { state?: string; platf
               </Button>
             </div>
           ) : (
-            <div className="space-y-2 max-h-80 overflow-auto">
+            <div className="max-h-80 space-y-2 overflow-auto">
               {pagesQuery.data?.map((p) => (
                 <div
                   key={p.id}
-                  className="flex items-center justify-between border rounded-lg p-3"
+                  className="flex items-center justify-between rounded-lg border p-3"
                 >
                   <div>
                     <div className="font-medium">{p.name}</div>
-                    <div className="text-xs text-muted-foreground">{p.id}</div>
+
+                    <div className="text-xs text-muted-foreground">
+                      {p.id}
+                    </div>
                   </div>
 
-                  {/* Select page button */}
                   <Button
                     disabled={selectPage.isPending}
                     onClick={async () => {
@@ -375,7 +416,9 @@ export default function ConnectPage({ state, platform }: { state?: string; platf
                         });
 
                         toastFlow.success(msg);
+
                         setOpen(false);
+
                         router.replace("/dashboard/connect");
                       } catch (err) {
                         toastFlow.error(getErrorMessage(err));
