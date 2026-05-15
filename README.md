@@ -1,36 +1,188 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Benaa Social Frontend
 
-## Getting Started
+Frontend dashboard for managing and publishing social media content across multiple platforms from a single interface.
 
-First, run the development server:
+---
+
+## Overview
+
+Benaa Social Frontend provides a unified dashboard where users can create, manage, and publish posts to multiple social media platforms at the same time.
+
+The frontend communicates with the backend API and provides a smooth publishing experience with real-time publishing status updates, retry handling, and platform-specific controls.
+
+The system currently supports integrations with:
+
+- Facebook
+- Instagram
+- TikTok
+- YouTube
+
+Users can connect their accounts, create posts, upload media, and monitor publishing results directly from the dashboard.
+
+---
+
+## Features
+
+- Authentication and protected routes
+- Role-based dashboard access
+- Responsive dashboard UI
+- Create and publish posts
+- Upload images and videos
+- Multi-platform publishing
+- TikTok publish status polling
+- Retry failed publishing attempts
+- Real-time publishing feedback
+- Platform-specific publishing settings
+- Publish error details viewer
+- Delete posts
+- Strong TypeScript typing
+- React Query data fetching and caching
+- Reusable UI components
+
+---
+
+## Tech Stack
+
+- Next.js
+- React.js
+- TypeScript
+- Tailwind CSS
+- Shadcn UI
+- React Query
+- Axios
+- React Hook Form
+- Zod
+
+---
+
+# Getting Started
+
+## 1. Clone the repository
+
+```bash
+git clone https://github.com/benaasocial/benaasocial_Front-End.git
+cd benaasocial_Front-End
+```
+
+---
+
+## 2. Install dependencies
+
+```bash
+npm install
+```
+
+---
+
+## 3. Create `.env.local` file
+
+Create a `.env.local` file in the root directory and add the following variables:
+
+```env
+NEXT_PUBLIC_API_URL=http://localhost:5000/api
+```
+
+---
+
+# Running Locally
+
+## Development Mode
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Runs the Next.js development server.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+---
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Build Project
 
-## Learn More
+```bash
+npm run build
+```
 
-To learn more about Next.js, take a look at the following resources:
+---
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Start Production Build
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+npm start
+```
 
-## Deploy on Vercel
+---
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+# Available Scripts
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```json
+{
+  "dev": "next dev",
+  "build": "next build",
+  "start": "next start",
+  "lint": "next lint"
+}
+```
+
+---
+
+# Social Publishing Flow
+
+1. User logs in to the dashboard.
+2. User connects social media accounts.
+3. User creates a post and uploads media.
+4. User selects the target platforms.
+5. Frontend sends the publishing request to the backend.
+6. Backend starts publishing content to selected platforms.
+7. Frontend displays platform-specific publishing results.
+8. TikTok publishing status is polled while processing.
+9. Users can view publish errors and retry failed platforms.
+
+---
+
+# Supported Platforms
+
+- Facebook Pages
+- Instagram Business Accounts
+- TikTok
+- YouTube
+
+---
+
+# TikTok Publishing Notes
+
+TikTok publishing is asynchronous.
+
+A successful initial request means the upload job has started, but it does not always mean the video has been fully published.
+
+The frontend handles this by:
+
+- Showing a processing state while TikTok is still publishing
+- Polling the backend for the latest TikTok publish status
+- Showing the final success or failure result
+- Displaying TikTok failure reasons when available
+- Allowing retry only when publishing has failed
+
+---
+
+# Project Structure
+
+```txt
+src/
+├── app/
+├── components/
+├── hooks/
+├── lib/
+├── services/
+├── types/
+└── validation/
+```
+
+---
+
+# Important Notes
+
+- The backend API must be running before using the dashboard.
+- Environment variables should never be committed.
+- TikTok publishing may take additional time because it requires platform-side processing.
+- Some publishing failures may come directly from platform validation rules.
+- OAuth redirect URLs must match the backend and provider dashboard settings.
