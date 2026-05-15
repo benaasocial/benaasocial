@@ -54,6 +54,20 @@ class HttpServices {
   }
 
   /**
+ * Get TikTok publish status for a post
+ * GET /posts/:id/tiktok/status
+ */
+  async getTikTokPostStatus<T>(postId: string) {
+    const res = await apiCall.get<ApiOk<T>>(
+      `/posts/${postId}/tiktok/status`
+    );
+
+    return res.data;
+  }
+
+
+
+  /**
    * Get all items
    * GET /endpoint
    */

@@ -5,6 +5,7 @@ import apiCall from "@/services/apiCall";
 import {
   ApiOk,
   Platform,
+  Post,
   RetryPostResponse,
   TikTokSettings,
 } from "@/types/types";
@@ -12,6 +13,29 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { AxiosError } from "axios";
 
 type RetryPostResponseType = ApiOk<RetryPostResponse>;
+
+function getPlatformError(post: Post, platform: Platform) {
+  const result = post?.publishResults?.[platform];
+
+  return (
+    result?.error ||
+    result?.rawStatus?.fail_reason ||
+    result?.rawStatus?.error?.message ||
+    result?.rawStatus?.error?.code ||
+    result?.rawStatus?.status_message ||
+    result?.rawStatus?.message ||
+    null
+  );
+}
+
+function hasProcessingTikTok(
+  post?: Post | null
+): boolean {
+  return (
+    post?.publishResults?.tiktok?.status ===
+    "processing"
+  );
+}
 
 const useRetry = () => {
   const queryClient = useQueryClient();
@@ -38,7 +62,9 @@ const useRetry = () => {
     },
 
     onSuccess: ({ data }) => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.posts });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.posts,
+      });
 
       const { meta, post } = data;
 
@@ -49,6 +75,66 @@ const useRetry = () => {
 
       const published = meta?.publishedPlatforms ?? [];
       const failed = meta?.failedPlatforms ?? [];
+      const isTikTokProcessing = hasProcessingTikTok(post);
+
+      /**
+       * TikTok retry success here only means:
+       * TikTok accepted the retry job.
+       * It does NOT mean the video is finally published.
+       */
+      if (isTikTokProcessing) {
+        const otherPublished = published.filter(
+          (p: Platform) => p !== "tiktok"
+        );
+
+        const otherFailed = failed.filter(
+          (p: Platform) => p !== "tiktok"
+        );
+
+        if (otherPublished.length && otherFailed.length) {
+          const failedWithErrors = otherFailed
+            .map((p: Platform) => {
+              const err = getPlatformError(post, p);
+              return `${p}${err ? ` (${err})` : ""}`;
+            })
+            .join(", ");
+
+          toastFlow.warning(
+            `Retry started. TikTok is still processing. Published on ${otherPublished.join(
+              ", "
+            )}, but failed on ${failedWithErrors}`
+          );
+          return;
+        }
+
+        if (otherPublished.length) {
+          toastFlow.success(
+            `Retry started. Published on ${otherPublished.join(
+              ", "
+            )}. TikTok is still processing.`
+          );
+          return;
+        }
+
+        if (otherFailed.length) {
+          const failedWithErrors = otherFailed
+            .map((p: Platform) => {
+              const err = getPlatformError(post, p);
+              return `${p}${err ? ` (${err})` : ""}`;
+            })
+            .join(", ");
+
+          toastFlow.warning(
+            `Retry started. TikTok is still processing, but failed on ${failedWithErrors}`
+          );
+          return;
+        }
+
+        toastFlow.success(
+          "Retry started. TikTok is still processing the video."
+        );
+        return;
+      }
 
       if (published.length > 0 && failed.length === 0) {
         toastFlow.success(
@@ -60,13 +146,15 @@ const useRetry = () => {
       if (published.length > 0 && failed.length > 0) {
         const failedWithErrors = failed
           .map((p: Platform) => {
-            const err = post.publishResults?.[p]?.error;
+            const err = getPlatformError(post, p);
             return `${p}${err ? ` (${err})` : ""}`;
           })
           .join(", ");
 
         toastFlow.warning(
-          `Post published on ${published.join(", ")}, but failed on ${failedWithErrors}`
+          `Post published on ${published.join(
+            ", "
+          )}, but failed on ${failedWithErrors}`
         );
         return;
       }
@@ -74,19 +162,28 @@ const useRetry = () => {
       if (published.length === 0 && failed.length > 0) {
         const failedWithErrors = failed
           .map((p: Platform) => {
-            const err = post.publishResults?.[p]?.error;
+            const err = getPlatformError(post, p);
             return `${p}${err ? ` (${err})` : ""}`;
           })
           .join(", ");
 
-        toastFlow.error(`Post retry failed on: ${failedWithErrors}`);
+        toastFlow.error(
+          `Post retry failed on: ${failedWithErrors}`
+        );
         return;
       }
 
-      toastFlow.success("Post retry completed successfully.");
+      toastFlow.success("Post retry request completed.");
     },
 
     onError: (err) => {
+      if (err.response?.status === 409) {
+        toastFlow.warning(
+          "Please wait. TikTok is still processing this retry."
+        );
+        return;
+      }
+
       toastFlow.error(getErrorMessage(err));
     },
   });

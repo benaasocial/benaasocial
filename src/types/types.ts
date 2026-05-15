@@ -173,58 +173,68 @@ export type VideoError = { video: { message: string; type: string } };
 
 
 
+export type PublishResultStatus =
+  | "idle"
+  | "processing"
+  | "failed"
+  | "published"
+  | null;
+
+export type TikTokRawStatus = {
+  status?: string;
+  fail_reason?: string;
+
+  error?: {
+    code?: string;
+    message?: string;
+  };
+
+  message?: string;
+  status_message?: string;
+
+  [key: string]: unknown;
+};
+
+export type PublishResult = {
+  status: PublishResultStatus;
+  externalId: string | null;
+  error: string | null;
+  publishedAt: string | null;
+  rawStatus?: TikTokRawStatus;
+};
+
 export type Post = {
-  action: string
-  caption: string
-  createdAt: string
-  hashtags: string[]
-  media: ImagesMedia | VideoMedia
+  action: string;
+  caption: string;
+  createdAt: string;
+  hashtags: string[];
+  media: ImagesMedia | VideoMedia;
 
   publishResults: {
-    facebook: {
-      status: string | null
-      externalId: string | null
-      error: string | null
-      publishedAt: string | null
-    }
-    instagram: {
-      status: string | null
-      externalId: string | null
-      error: string | null
-      publishedAt: string | null
-    }
-    tiktok: {
-      status: string | null
-      externalId: string | null
-      error: string | null
-      publishedAt: string | null
-    }
-    youtube: {
-      status: string | null
-      externalId: string | null
-      error: string | null
-      publishedAt: string | null
-    }
-  }
+    facebook: PublishResult;
+    instagram: PublishResult;
+    tiktok: PublishResult;
+    youtube: PublishResult;
+  };
 
-  status: "published" | "failed" | "draft" | "queued" | "publishing" | "partial"
+  status: PostStatus;
 
   targets: {
-    facebook: boolean
-    instagram: boolean
-    tiktok: boolean
-    youtube: boolean
-  }
+    facebook: boolean;
+    instagram: boolean;
+    tiktok: boolean;
+    youtube: boolean;
+  };
 
-  updatedAt: string
+  updatedAt: string;
 
   user: {
-    _id: string
-    username: string
-  }
+    _id: string;
+    username: string;
+  };
 
-  _id: string
-}
+  _id: string;
+};
 
 
 
@@ -241,35 +251,14 @@ export type PostsResponse = {
 }
 
 
-type PublishResult = {
-  status: string | null;
-  externalId: string | null;
-  error: string | null;
-  publishedAt: string | null;
-};
-
 export type CreatePostResponse = {
-  meta: { failedPlatforms: Platform[], publishedPlatforms: Platform[] },
-  post: {
-    action: string
-    caption: string
-    createdAt: string
-    hashtags: string[]
-    media: ImagesMedia | VideoMedia
-    publishResults: {
-      facebook: PublishResult,
-      instagram: PublishResult
-      tiktok: PublishResult
-      youtube: PublishResult,
-    }
-    status: string
-    targets: { facebook: boolean, instagram: boolean, tiktok: boolean, youtube: boolean; }
-    updatedAt: string
-    user: string
-    _id: string
-
-  }
-}
+  meta: {
+    failedPlatforms: Platform[];
+    publishedPlatforms: Platform[];
+    idlePlatforms?: Platform[];
+  };
+  post: Post;
+};
 
 export type RetryPlatform = {
   failedPlatforms: Platform[];
@@ -291,50 +280,21 @@ export type PostPublishResults = {
   youtube: PublishResult;
 };
 
-export type PostEntity = {
-  _id: string;
-  action: string;
-  caption: string;
-  createdAt: string;
-  updatedAt: string;
-  hashtags: string[];
-  media: ImagesMedia | VideoMedia;
-  publishResults: PostPublishResults;
-  status: string;
-  targets: PostTargets;
-  user: string;
-};
-
 export type RetryPostResponse = {
   meta: RetryPlatform;
-  post: PostEntity;
+  post: Post;
 };
 
 
 
 export type PlatformResultStatus = "idle" | "failed" | "published";
-export type PostStatus = "draft" | "queued" | "publishing" | "published" | "partial" | "failed";
-
-export type PlatformPublishResult = {
-  status: PlatformResultStatus | null;
-  externalId: string | null;
-  error: string | null;
-  publishedAt: string | null;
-};
-
-export type PostTest = {
-  _id: string;
-  user: { _id: string; username: string };
-  action: "draft" | "publish" | string;
-  caption: string;
-  hashtags: string[];
-  media: ImagesMedia | VideoMedia;
-  targets: Record<Platform, boolean>;
-  publishResults: Record<Platform, PlatformPublishResult>;
-  status: PostStatus | string;
-  createdAt: string;
-  updatedAt: string;
-};
+export type PostStatus =
+  | "draft"
+  | "queued"
+  | "publishing"
+  | "published"
+  | "partial"
+  | "failed";
 
 
 export type PostTargetsSectionProps = {
@@ -393,4 +353,81 @@ export type TikTokCreatorInfo = {
     | "MUTUAL_FOLLOW_FRIENDS"
     | "SELF_ONLY"
   )[];
+};
+
+
+
+
+
+
+
+
+
+type RetryMutation = {
+  isPending: boolean;
+
+  variables?: {
+    id: string;
+    platform?: Platform;
+    tiktokSettings?: TikTokSettings;
+  };
+
+  mutate: (input: {
+    id: string;
+    platform?: Platform;
+    tiktokSettings?: TikTokSettings;
+  }) => void;
+};
+
+type DeletePostMutation = {
+  isPending: boolean;
+
+  variables?: {
+    id: string;
+  };
+
+  mutateAsync: (input: {
+    id: string;
+  }) => Promise<string>;
+};
+
+export type PostTableRowProps = {
+  post: Post;
+
+  retry: RetryMutation;
+
+  busyId?: string;
+
+  deletePostMutation: DeletePostMutation;
+
+  doRetry: (
+    id: string,
+    platform?: Platform
+  ) => void;
+
+  openDetails: (
+    postId: string,
+    platform: Platform,
+    error: string | null
+  ) => void;
+
+  handlePlatformRetry: (
+    postId: string,
+    platform: Platform
+  ) => void;
+};
+
+
+export type PlatformResultRowProps = {
+  post: Post;
+
+  platform: Platform;
+
+  isBusy: boolean;
+
+  canRetry: boolean;
+
+  onRetry: () => void;
+
+  onViewDetails: () => void;
 };

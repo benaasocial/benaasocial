@@ -1,16 +1,45 @@
-import { format } from "date-fns";
-import { Badge } from "@/components/ui/badge";
-import { Platform, Post } from "@/types/types";
-import { formatPublishError, prettyPlatform } from "./helpers";
+"use client";
 
-type PlatformResultRowProps = {
-  post: Post;
-  platform: Platform;
-  isBusy: boolean;
-  canRetry: boolean;
-  onRetry: () => void;
-  onViewDetails: () => void;
-};
+import { Button } from "@/components/ui/button";
+import { prettyPlatform } from "./helpers";
+import { PlatformResultRowProps, PublishResult } from "@/types/types";
+
+function getPlatformError(
+  result?: PublishResult | null
+): string | null {
+  return (
+    result?.error ||
+    result?.rawStatus?.fail_reason ||
+    result?.rawStatus?.error?.message ||
+    result?.rawStatus?.error?.code ||
+    result?.rawStatus?.status_message ||
+    result?.rawStatus?.message ||
+    null
+  );
+}
+
+function getStatusLabel(status?: string) {
+  if (status === "published") return "Published";
+  if (status === "processing") return "Processing";
+  if (status === "failed") return "Failed";
+  return "Idle";
+}
+
+function getStatusClass(status?: string) {
+  if (status === "published") {
+    return "bg-green-100 text-green-700";
+  }
+
+  if (status === "processing") {
+    return "bg-yellow-100 text-yellow-700";
+  }
+
+  if (status === "failed") {
+    return "bg-red-100 text-red-700";
+  }
+
+  return "bg-muted text-muted-foreground";
+}
 
 export default function PlatformResultRow({
   post,
@@ -20,107 +49,72 @@ export default function PlatformResultRow({
   onRetry,
   onViewDetails,
 }: PlatformResultRowProps) {
-  // get publish result for this platform
-  const result = post?.publishResults?.[platform];
+  const result = post.publishResults?.[platform];
 
-  // readable platform name
-  const label = prettyPlatform(platform);
+  const status = result?.status || "idle";
+  const errorText = getPlatformError(result);
 
-  // shared retry button styles
-  const retryButtonClassName = `text-[11px] underline ${
-    isBusy
-      ? "cursor-not-allowed text-muted-foreground/50"
-      : "text-muted-foreground hover:text-black"
-  }`;
-
-  // not sent yet
-  if (!result || result.status === "idle") {
-    return (
-      <div className="flex items-center justify-between gap-2">
-        <div className="text-xs text-muted-foreground">{label}: Not sent</div>
-
-        {/* show retry only if retry is allowed */}
-        {canRetry && (
-          <button
-            type="button"
-            disabled={isBusy}
-            onClick={onRetry}
-            className={retryButtonClassName.replace("text-[11px]", "text-xs")}
-          >
-            {isBusy ? "Retrying..." : "Retry"}
-          </button>
-        )}
-      </div>
-    );
-  }
-
-  // published successfully
-  if (result.status === "published") {
-    return (
-      <div className="flex items-start justify-between gap-2">
+  return (
+    <div className="rounded-lg border p-3">
+      <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <div className="text-xs">
-            {label}: <span className="font-medium text-green-600">Published</span>
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium">
+              {prettyPlatform(platform)}
+            </span>
+
+            <span
+              className={`rounded-full px-2 py-0.5 text-xs font-medium ${getStatusClass(
+                status
+              )}`}
+            >
+              {getStatusLabel(status)}
+            </span>
           </div>
 
-          {/* show publish date if available */}
-          {result.publishedAt && (
-            <div className="text-[11px] text-muted-foreground">
-              {format(new Date(result.publishedAt), "PPpp")}
+          {status === "processing" && (
+            <div className="mt-1 text-xs text-muted-foreground">
+              TikTok is still processing this video.
+            </div>
+          )}
+
+          {status === "failed" && errorText && (
+            <div className="mt-1 line-clamp-2 text-xs text-red-600">
+              {errorText}
+            </div>
+          )}
+
+          {status === "published" && result?.publishedAt && (
+            <div className="mt-1 text-xs text-muted-foreground">
+              Published at{" "}
+              {new Date(result.publishedAt).toLocaleString()}
             </div>
           )}
         </div>
-      </div>
-    );
-  }
 
-  // publishing failed
-  if (result.status === "failed") {
-    return (
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <div className="flex items-center gap-2 text-xs">
-            <span>
-              {label}: <span className="font-medium text-red-600">Failed</span>
-            </span>
-
-            {/* small badge to highlight failed state */}
-            <Badge variant="outline" className="text-[10px]">
-              Needs attention
-            </Badge>
-          </div>
-
-          {/* short version of error message */}
-          <div className="truncate text-[11px] text-muted-foreground">
-            {formatPublishError(result.error)}
-          </div>
-
-          <div className="flex gap-2 pt-1">
-            <button
-              type="button"
+        <div className="flex shrink-0 items-center gap-2">
+          {status === "failed" && (
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={onViewDetails}
-              className="text-[11px] underline text-muted-foreground hover:text-black"
             >
-              View details
-            </button>
+              View reason
+            </Button>
+          )}
 
-            {/* retry button */}
-            {canRetry && (
-              <button
-                type="button"
-                disabled={isBusy}
-                onClick={onRetry}
-                className={retryButtonClassName}
-              >
-                {isBusy ? "Retrying..." : "Retry"}
-              </button>
-            )}
-          </div>
+          {canRetry && (
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={isBusy}
+              onClick={onRetry}
+            >
+              {isBusy ? "Retrying..." : "Retry"}
+            </Button>
+          )}
         </div>
       </div>
-    );
-  }
-
-  // fallback for unexpected status
-  return null;
+    </div>
+  );
 }

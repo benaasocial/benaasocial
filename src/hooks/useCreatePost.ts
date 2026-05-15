@@ -2,7 +2,12 @@ import { getErrorMessage } from "@/lib/getErrorMessage";
 import { queryKeys } from "@/lib/queryKeys";
 import { toastFlow } from "@/lib/toast";
 import postsServices from "@/services/postsService";
-import { ApiOk, CreatePostPayload, CreatePostResponse } from "@/types/types";
+import {
+  ApiOk,
+  CreatePostPayload,
+  CreatePostResponse,
+  Post,
+} from "@/types/types";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { AxiosError } from "axios";
 
@@ -10,6 +15,26 @@ import { AxiosError } from "axios";
  * API response type for create post
  */
 type CreatePostResponseType = ApiOk<CreatePostResponse>;
+
+type PlatformName = "facebook" | "instagram" | "tiktok" | "youtube";
+
+function getPlatformError(post: Post, platform: PlatformName) {
+  const result = post?.publishResults?.[platform];
+
+  return (
+    result?.error ||
+    result?.rawStatus?.fail_reason ||
+    result?.rawStatus?.error?.message ||
+    result?.rawStatus?.error?.code ||
+    result?.rawStatus?.status_message ||
+    result?.rawStatus?.message ||
+    null
+  );
+}
+
+function hasProcessingTikTok(post: Post) {
+  return post?.publishResults?.tiktok?.status === "processing";
+}
 
 /**
  * useCreatePost
@@ -33,17 +58,13 @@ export default function useCreatePost() {
      * Handle successful response
      */
     onSuccess: (res) => {
-      /**
-       * Refresh posts list after creating a post
-       */
-      queryClient.invalidateQueries({ queryKey: queryKeys.posts });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.posts,
+      });
 
       const meta = res?.data?.meta;
       const post = res?.data?.post;
 
-      /**
-       * Safety check in case post is missing
-       */
       if (!post) {
         toastFlow.error("Failed to create the post.");
         return;
@@ -51,6 +72,66 @@ export default function useCreatePost() {
 
       const published = meta?.publishedPlatforms || [];
       const failed = meta?.failedPlatforms || [];
+      const isTikTokProcessing = hasProcessingTikTok(post);
+
+      /**
+       * Important:
+       * TikTok success here means upload job started,
+       * not final publish success.
+       */
+      if (isTikTokProcessing) {
+        const otherPublished = published.filter(
+          (p: PlatformName) => p !== "tiktok"
+        );
+
+        const otherFailed = failed.filter(
+          (p: PlatformName) => p !== "tiktok"
+        );
+
+        if (otherPublished.length && otherFailed.length) {
+          const errors = otherFailed
+            .map((p: PlatformName) => {
+              const err = getPlatformError(post, p);
+              return `${p}${err ? ` (${err})` : ""}`;
+            })
+            .join(", ");
+
+          toastFlow.warning(
+            `Post created. TikTok upload started and is still processing. Published on ${otherPublished.join(
+              ", "
+            )}, but failed on ${errors}`
+          );
+          return;
+        }
+
+        if (otherPublished.length) {
+          toastFlow.success(
+            `Post created. Published on ${otherPublished.join(
+              ", "
+            )}. TikTok upload started and is still processing.`
+          );
+          return;
+        }
+
+        if (otherFailed.length) {
+          const errors = otherFailed
+            .map((p: PlatformName) => {
+              const err = getPlatformError(post, p);
+              return `${p}${err ? ` (${err})` : ""}`;
+            })
+            .join(", ");
+
+          toastFlow.warning(
+            `Post created. TikTok upload started and is still processing, but failed on ${errors}`
+          );
+          return;
+        }
+
+        toastFlow.success(
+          "Post created. TikTok upload started and is still processing."
+        );
+        return;
+      }
 
       /**
        * Case 1: Published on all selected platforms
@@ -67,8 +148,8 @@ export default function useCreatePost() {
        */
       if (published.length && failed.length) {
         const errors = failed
-          .map((p: "facebook" | "instagram" | "tiktok" | "youtube") => {
-            const err = post.publishResults?.[p]?.error;
+          .map((p: PlatformName) => {
+            const err = getPlatformError(post, p);
             return `${p}${err ? ` (${err})` : ""}`;
           })
           .join(", ");
@@ -86,19 +167,18 @@ export default function useCreatePost() {
        */
       if (!published.length && failed.length) {
         const errors = failed
-          .map((p: "facebook" | "instagram" | "tiktok" | "youtube") => {
-            const err = post.publishResults?.[p]?.error;
+          .map((p: PlatformName) => {
+            const err = getPlatformError(post, p);
             return `${p}${err ? ` (${err})` : ""}`;
           })
           .join(", ");
 
-        toastFlow.error(`Post created but failed to publish on: ${errors}`);
+        toastFlow.error(
+          `Post created but failed to publish on: ${errors}`
+        );
         return;
       }
 
-      /**
-       * Fallback success message
-       */
       toastFlow.success("Post created successfully.");
     },
 
