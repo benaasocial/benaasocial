@@ -388,7 +388,7 @@ type DeletePostMutation = {
 
   mutateAsync: (input: {
     id: string;
-  }) => Promise<string>;
+  }) => Promise<unknown>;
 };
 
 export type PostTableRowProps = {

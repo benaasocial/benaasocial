@@ -41,28 +41,3 @@ export function hasAnyRetry(post: Post): boolean {
 export function getPostPlatforms(post: Post): Platform[] {
   return SUPPORTED_PLATFORMS.filter((platform) => post?.targets?.[platform]);
 }
-
-// Clean and shorten error message coming from backend
-export function formatPublishError(raw?: string | null, maxLength = 100): string {
-  if (!raw) return "";
-
-  let message = raw;
-
-  // try to extract JSON part if exists in the string
-  const jsonStartIndex = raw.indexOf("{");
-
-  if (jsonStartIndex !== -1) {
-    try {
-      const parsed = JSON.parse(raw.slice(jsonStartIndex));
-      message = parsed?.error?.message ?? raw;
-    } catch {
-      // fallback to raw if parsing fails
-      message = raw;
-    }
-  }
-
-  // trim long messages
-  return message.length > maxLength
-    ? `${message.slice(0, maxLength)}…`
-    : message;
-}
