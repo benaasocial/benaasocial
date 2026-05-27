@@ -118,7 +118,13 @@ export type CreatePostPayload =
     targets: Targets;
     media: VideoMedia;
     tiktokSettings?: {
-      privacyStatus: "PUBLIC_TO_EVERYONE" | "MUTUAL_FOLLOW_FRIENDS" | "SELF_ONLY" | "";
+      privacyStatus:
+      | "PUBLIC_TO_EVERYONE"
+      | "FOLLOWER_OF_CREATOR"
+      | "MUTUAL_FOLLOW_FRIENDS"
+      | "SELF_ONLY"
+      | "";
+
       allowComments: boolean;
       allowDuet: boolean;
       allowStitch: boolean;
