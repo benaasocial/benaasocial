@@ -83,6 +83,7 @@ export type VideoMedia = { kind: "video"; video: UploadedVideo };
 
 export type TikTokPrivacy =
   | "PUBLIC_TO_EVERYONE"
+  | "FOLLOWER_OF_CREATOR"
   | "MUTUAL_FOLLOW_FRIENDS"
   | "SELF_ONLY";
 

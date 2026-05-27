@@ -135,11 +135,18 @@ export const CreatePostFormSchema = z
      */
     tiktokSettings: z.object({
       privacyStatus: z
-        .enum(["PUBLIC_TO_EVERYONE", "MUTUAL_FOLLOW_FRIENDS", "SELF_ONLY"])
+        .enum([
+          "PUBLIC_TO_EVERYONE",
+          "FOLLOWER_OF_CREATOR",
+          "MUTUAL_FOLLOW_FRIENDS",
+          "SELF_ONLY",
+        ])
         .or(z.literal("")),
 
       allowComments: z.boolean(),
+
       allowDuet: z.boolean(),
+
       allowStitch: z.boolean(),
     }),
 
