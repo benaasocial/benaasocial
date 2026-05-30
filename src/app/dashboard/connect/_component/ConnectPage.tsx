@@ -29,7 +29,14 @@ import { getErrorMessage } from "@/lib/getErrorMessage";
 import PlatformIcon from "@/components/posts/PlatformIcons/PlatformIcons";
 
 /**
- * Single platform row
+ * Platform row used for:
+ * - Facebook
+ * - Instagram
+ * - TikTok
+ * - YouTube
+ *
+ * The full row is clickable, but the checkbox still handles
+ * the actual toggle action.
  */
 function Row({
   platform,
@@ -46,14 +53,18 @@ function Row({
     platform === "facebook"
       ? "Facebook"
       : platform === "instagram"
-      ? "Instagram"
-      : platform === "tiktok"
-      ? "TikTok"
-      : platform === "youtube"
-      ? "YouTube"
-      : "X";
+        ? "Instagram"
+        : platform === "tiktok"
+          ? "TikTok"
+          : platform === "youtube"
+            ? "YouTube"
+            : "X";
 
-  const checkboxRef = React.useRef<HTMLButtonElement | null>(null);
+  /**
+   * Used to trigger checkbox click when the user clicks the row.
+   */
+  const checkboxRef =
+    React.useRef<HTMLButtonElement | null>(null);
 
   return (
     <div
@@ -88,7 +99,9 @@ function Row({
               ref={checkboxRef}
               checked={state.active}
               disabled={disabled}
-              onCheckedChange={(v) => onToggle(v === true)}
+              onCheckedChange={(v) =>
+                onToggle(v === true)
+              }
             />
           </div>
 
@@ -97,7 +110,9 @@ function Row({
           </div>
 
           <div className="min-w-0">
-            <div className="truncate font-medium">{title}</div>
+            <div className="truncate font-medium">
+              {title}
+            </div>
 
             <div className="break-words text-xs text-muted-foreground">
               {state.connected ? (
@@ -129,10 +144,14 @@ function Row({
           )}
 
           <Badge
-            variant={state.connected ? "default" : "secondary"}
+            variant={
+              state.connected ? "default" : "secondary"
+            }
             className="whitespace-nowrap"
           >
-            {state.connected ? "Connected" : "Not connected"}
+            {state.connected
+              ? "Connected"
+              : "Not connected"}
           </Badge>
         </div>
       </div>
@@ -141,7 +160,8 @@ function Row({
 }
 
 /**
- * Empty fallback state
+ * Fallback platform state used while status data is loading
+ * or if backend does not return a connection for a platform.
  */
 const EMPTY_STATE: PlatformState = {
   connected: false,
@@ -150,7 +170,14 @@ const EMPTY_STATE: PlatformState = {
 };
 
 /**
- * Connect platforms page
+ * Main connect page.
+ *
+ * Responsibilities:
+ * - Display all supported platforms
+ * - Start OAuth connect flow
+ * - Activate/deactivate connected platforms
+ * - Handle Meta page selection after OAuth callback
+ * - Handle YouTube channel connection after OAuth callback
  */
 export default function ConnectPage({
   state,
@@ -159,8 +186,14 @@ export default function ConnectPage({
   state?: string;
   platform?: string;
 }) {
+  /**
+   * Current connection status for all platforms.
+   */
   const { data: status, isLoading } = useStatus();
 
+  /**
+   * Platform mutations / OAuth starters.
+   */
   const setActive = useSetPlatformActive();
   const startMeta = useMetaStartUrl();
   const startTiktok = useTikTokStartUrl();
@@ -168,37 +201,53 @@ export default function ConnectPage({
   const getYouTubeChannel = useYouTubeChannel();
 
   /**
-   * Prevent handling same OAuth callback more than once
+   * Prevent handling the same OAuth callback twice.
+   *
+   * React Strict Mode may run effects twice in development,
+   * so this protects against duplicate requests.
    */
-  const handledOAuthRef = React.useRef<string | null>(null);
+  const handledOAuthRef =
+    React.useRef<string | null>(null);
 
-  // shared busy state
+  /**
+   * Shared loading state for row interactions.
+   */
   const [busy, setBusy] = React.useState(false);
 
-  // Meta pages dialog state
+  /**
+   * Controls Meta page picker dialog.
+   */
   const [open, setOpen] = React.useState(false);
 
   const router = useRouter();
 
   /**
-   * Load Meta pages after redirect
+   * Load Meta pages only after Meta OAuth callback.
+   *
+   * The backend redirects with:
+   * /dashboard/connect?state=xxx&platform=meta
    */
-  const pagesQuery = useGetPages(platform === "meta" ? state : undefined);
+  const pagesQuery = useGetPages(
+    platform === "meta" ? state : undefined
+  );
 
   /**
-   * Select Meta page mutation
+   * Select Facebook page and save Facebook/Instagram connection.
    */
   const selectPage = useSelectMetaPage();
 
   /**
-   * Open page picker dialog when Meta callback exists
+   * Open Meta page picker after successful Meta OAuth callback.
+   *
+   * If user cancelled OAuth, backend redirects to /dashboard/connect
+   * without state/platform, so this will not open.
    */
   React.useEffect(() => {
     setOpen(platform === "meta" && !!state);
   }, [platform, state]);
 
   /**
-   * Safe connections object
+   * Safe connection object used by the UI.
    */
   const connections = status?.connections ?? {
     facebook: EMPTY_STATE,
@@ -208,31 +257,56 @@ export default function ConnectPage({
   };
 
   /**
-   * Handle connect / disconnect / activate toggle
+   * Handles clicking a platform row.
+   *
+   * If platform is not connected:
+   * - Starts OAuth flow
+   *
+   * If platform is already connected:
+   * - Activates or deactivates it
    */
-  const handleToggle = async (platform: Platform, next: boolean) => {
+  const handleToggle = async (
+    platform: Platform,
+    next: boolean
+  ) => {
     setBusy(true);
 
     try {
       const current = connections[platform];
 
-      // enable / connect flow
+      /**
+       * User wants to enable/connect the platform.
+       */
       if (next) {
+        /**
+         * If not connected yet, start OAuth flow.
+         */
         if (!current.connected) {
-          if (platform === "facebook" || platform === "instagram") {
-            const { url } = await startMeta.mutateAsync({ platform });
+          if (
+            platform === "facebook" ||
+            platform === "instagram"
+          ) {
+            const { url } =
+              await startMeta.mutateAsync({
+                platform,
+              });
+
             window.location.href = url;
             return;
           }
 
           if (platform === "tiktok") {
-            const { url } = await startTiktok.mutateAsync();
+            const { url } =
+              await startTiktok.mutateAsync();
+
             window.location.href = url;
             return;
           }
 
           if (platform === "youtube") {
-            const { url } = await startYouTube.mutateAsync();
+            const { url } =
+              await startYouTube.mutateAsync();
+
             window.location.href = url;
             return;
           }
@@ -240,18 +314,23 @@ export default function ConnectPage({
           return;
         }
 
-        // already connected → activate
+        /**
+         * Platform is already connected,
+         * so just mark it active.
+         */
         await setActive.mutateAsync({
           platform,
           active: true,
         });
 
         toastFlow.success(`${platform} activated`);
-
         return;
       }
 
-      // deactivate connected platform
+      /**
+       * User wants to disable platform publishing,
+       * but keep the account connected.
+       */
       if (current.connected) {
         await setActive.mutateAsync({
           platform,
@@ -268,7 +347,13 @@ export default function ConnectPage({
   };
 
   /**
-   * Handle YouTube OAuth callback
+   * Handle YouTube OAuth callback.
+   *
+   * Backend redirects with:
+   * /dashboard/connect?state=xxx&platform=youtube
+   *
+   * Then frontend calls backend to fetch the YouTube channel
+   * and save the connected account.
    */
   React.useEffect(() => {
     const run = async () => {
@@ -276,23 +361,34 @@ export default function ConnectPage({
 
       const key = `youtube:${state}`;
 
-      // avoid duplicate execution
+      /**
+       * Avoid duplicate execution in React Strict Mode.
+       */
       if (handledOAuthRef.current === key) return;
 
       handledOAuthRef.current = key;
 
       try {
-        await getYouTubeChannel.mutateAsync({ state });
+        await getYouTubeChannel.mutateAsync({
+          state,
+        });
+      } catch (err) {
+        toastFlow.error(getErrorMessage(err));
       } finally {
         router.replace("/dashboard/connect");
       }
     };
 
     run();
-  }, [getYouTubeChannel, platform, router, state]);
+  }, [
+    getYouTubeChannel,
+    platform,
+    router,
+    state,
+  ]);
 
   /**
-   * Loading state
+   * Initial loading state.
    */
   if (isLoading) {
     return <div className="p-6">Loading...</div>;
@@ -301,7 +397,9 @@ export default function ConnectPage({
   return (
     <div className="mx-auto max-w-3xl space-y-4 p-4 md:p-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold">Connect Platforms</h1>
+        <h1 className="text-xl font-bold">
+          Connect Platforms
+        </h1>
       </div>
 
       <Card>
@@ -312,36 +410,56 @@ export default function ConnectPage({
         </CardHeader>
 
         <CardContent className="space-y-3">
-          {/* Facebook */}
           <Row
             platform="facebook"
             state={connections.facebook}
-            disabled={busy || setActive.isPending || startMeta.isPending}
-            onToggle={(next) => handleToggle("facebook", next)}
+            disabled={
+              busy ||
+              setActive.isPending ||
+              startMeta.isPending
+            }
+            onToggle={(next) =>
+              handleToggle("facebook", next)
+            }
           />
 
-          {/* Instagram */}
           <Row
             platform="instagram"
             state={connections.instagram}
-            disabled={busy || setActive.isPending || startMeta.isPending}
-            onToggle={(next) => handleToggle("instagram", next)}
+            disabled={
+              busy ||
+              setActive.isPending ||
+              startMeta.isPending
+            }
+            onToggle={(next) =>
+              handleToggle("instagram", next)
+            }
           />
 
-          {/* TikTok */}
           <Row
             platform="tiktok"
             state={connections.tiktok}
-            disabled={busy || setActive.isPending || startMeta.isPending}
-            onToggle={(next) => handleToggle("tiktok", next)}
+            disabled={
+              busy ||
+              setActive.isPending ||
+              startTiktok.isPending
+            }
+            onToggle={(next) =>
+              handleToggle("tiktok", next)
+            }
           />
 
-          {/* YouTube */}
           <Row
             platform="youtube"
             state={connections.youtube}
-            disabled={busy || setActive.isPending || startMeta.isPending}
-            onToggle={(next) => handleToggle("youtube", next)}
+            disabled={
+              busy ||
+              setActive.isPending ||
+              startYouTube.isPending
+            }
+            onToggle={(next) =>
+              handleToggle("youtube", next)
+            }
           />
         </CardContent>
       </Card>
@@ -352,6 +470,9 @@ export default function ConnectPage({
         onOpenChange={(v) => {
           setOpen(v);
 
+          /**
+           * If user closes the dialog, clean the OAuth query params.
+           */
           if (!v) {
             router.replace("/dashboard/connect");
           }
@@ -359,11 +480,14 @@ export default function ConnectPage({
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Select Facebook Page</DialogTitle>
+            <DialogTitle>
+              Select Facebook Page
+            </DialogTitle>
 
             <DialogDescription>
-              Choose the page you want to connect. This will also detect
-              Instagram business account if linked.
+              Choose the page you want to connect. This
+              will also detect Instagram business account
+              if linked.
             </DialogDescription>
           </DialogHeader>
 
@@ -375,9 +499,12 @@ export default function ConnectPage({
             <div className="text-sm text-red-600">
               Failed to load pages
             </div>
-          ) : pagesQuery.data && pagesQuery.data.length === 0 ? (
+          ) : pagesQuery.data &&
+            pagesQuery.data.length === 0 ? (
             <div className="space-y-3 text-sm text-muted-foreground">
-              <div>No Facebook pages found for this account.</div>
+              <div>
+                No Facebook pages found for this account.
+              </div>
 
               <Button
                 variant="outline"
@@ -397,7 +524,9 @@ export default function ConnectPage({
                   className="flex items-center justify-between rounded-lg border p-3"
                 >
                   <div>
-                    <div className="font-medium">{p.name}</div>
+                    <div className="font-medium">
+                      {p.name}
+                    </div>
 
                     <div className="text-xs text-muted-foreground">
                       {p.id}
@@ -410,18 +539,23 @@ export default function ConnectPage({
                       if (!state) return;
 
                       try {
-                        const msg = await selectPage.mutateAsync({
-                          state,
-                          pageId: p.id,
-                        });
+                        const msg =
+                          await selectPage.mutateAsync({
+                            state,
+                            pageId: p.id,
+                          });
 
                         toastFlow.success(msg);
 
                         setOpen(false);
 
-                        router.replace("/dashboard/connect");
+                        router.replace(
+                          "/dashboard/connect"
+                        );
                       } catch (err) {
-                        toastFlow.error(getErrorMessage(err));
+                        toastFlow.error(
+                          getErrorMessage(err)
+                        );
                       }
                     }}
                   >
