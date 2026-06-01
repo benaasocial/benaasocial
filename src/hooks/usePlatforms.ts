@@ -138,7 +138,8 @@ export function useSelectMetaPage() {
     /**
      * Refresh status after success
      */
-    onSuccess: () => {
+    onSuccess: (message) => {
+      toastFlow.success(message);
       qc.invalidateQueries({ queryKey: queryKeys.status });
     },
 

@@ -15,7 +15,6 @@ import {
   useYouTubeChannel,
 } from "@/hooks/usePlatforms";
 import { Platform, PlatformState } from "@/types/types";
-import { toastFlow } from "@/lib/toast";
 import { useRouter } from "next/navigation";
 import {
   Dialog,
@@ -25,7 +24,6 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { getErrorMessage } from "@/lib/getErrorMessage";
 import PlatformIcon from "@/components/posts/PlatformIcons/PlatformIcons";
 
 /**
@@ -323,7 +321,6 @@ export default function ConnectPage({
           active: true,
         });
 
-        toastFlow.success(`${platform} activated`);
         return;
       }
 
@@ -336,11 +333,11 @@ export default function ConnectPage({
           platform,
           active: false,
         });
-
-        toastFlow.success(`${platform} deactivated`);
       }
-    } catch (err) {
-      toastFlow.error(getErrorMessage(err));
+    } catch {
+      /**
+       * Toast is handled inside hooks.
+       */
     } finally {
       setBusy(false);
     }
@@ -372,8 +369,10 @@ export default function ConnectPage({
         await getYouTubeChannel.mutateAsync({
           state,
         });
-      } catch (err) {
-        toastFlow.error(getErrorMessage(err));
+      } catch {
+        /**
+         * Toast is handled inside hook.
+         */
       } finally {
         router.replace("/dashboard/connect");
       }
@@ -539,23 +538,20 @@ export default function ConnectPage({
                       if (!state) return;
 
                       try {
-                        const msg =
-                          await selectPage.mutateAsync({
-                            state,
-                            pageId: p.id,
-                          });
-
-                        toastFlow.success(msg);
+                        await selectPage.mutateAsync({
+                          state,
+                          pageId: p.id,
+                        });
 
                         setOpen(false);
 
                         router.replace(
                           "/dashboard/connect"
                         );
-                      } catch (err) {
-                        toastFlow.error(
-                          getErrorMessage(err)
-                        );
+                      } catch {
+                        /**
+                         * Toast is handled inside hook.
+                         */
                       }
                     }}
                   >
